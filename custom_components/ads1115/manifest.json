@@ -1,0 +1,11 @@
+{
+  "codeowners": ["@Elwinmage"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/Elwinmage/ha-ads1115-component",
+  "domain": "ads1115",
+  "iot_class": "local_polling",
+  "name": "ADS1115",
+  "requirements": [],
+  "version": "1.0.0"
+}
