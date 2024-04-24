@@ -1,0 +1,31 @@
+{
+    "title": "ADS1115 Configuration",
+    "config": {
+        "flow_title": "ADS1115 configuration",
+        "step": {
+            "user": {
+                "title": "Define New Entity",
+                "data": {
+                    "i2c_bus": "I2C bus",
+                    "i2c_address": "I2C address",
+                    "pin_number": "Pin number",
+                    "pin_name": "Pin name"
+                }
+            }
+        },
+        "abort": {
+            "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+            "cannot_create": "Unable to create ADS1115 device with specified parameters"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Define Entity Properties",
+                "data": {
+                    "gain": "GAIN"
+                }
+            }
+        }
+    }
+}
