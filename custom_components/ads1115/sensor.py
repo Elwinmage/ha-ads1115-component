@@ -16,7 +16,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.helpers.entity import DeviceInfo#, DeviceEntryType
 
-from .const import DOMAIN, CONF_FLOW_PIN_NAME,CONF_I2C_BUS,CONF_I2C_ADDRESS,CONF_FLOW_PIN_NUMBER
+from .const import DOMAIN, CONF_FLOW_PIN_NAME,CONF_I2C_ADDRESS,CONF_FLOW_PIN_NUMBER,CONF_GAIN, CONF_GAIN_DEFAULT
 
 from . import async_get_or_create
 
@@ -49,28 +49,38 @@ class ADS1115Sensor(SensorEntity):
         entry_infos,  # pylint: disable=unused-argument
     ) -> None:
         """Initisalisation de notre entité"""
-        self._state=15
+        self._state=None
         self._hass = hass
         self._entry_infos=entry_infos
         self._attr_has_entity_name = True
         self._attr_name = entry_infos.data.get(CONF_FLOW_PIN_NAME)
-        self._bus = entry_infos.data.get(CONF_I2C_BUS)
         self._i2c_address = entry_infos.data.get(CONF_I2C_ADDRESS)
         self._pin = entry_infos.data.get(CONF_FLOW_PIN_NUMBER)
+        self._gain = entry_infos.data.get(CONF_GAIN)
+        if self._gain == None:
+            self._gain = CONF_GAIN_DEFAULT
+        self._read_request=[((((((1 ) <<  3) + self.pinNumber)<<3)+(self.gainNumber))<<1),0x83]
+        
 
+    @property
+    def readRequest(self):
+        """Return bytes to send for reading"""
+        return self._read_request
+        
     @property
     def unique_id(self):
         """Return unique id"""
-        return f"{self._bus}-0x{self._i2c_address:02x}-{self._pin}"
+        return f"{self._i2c_address}-{self.pin}"
 
+    def set_state(self,state):
+        """Set state"""
+        self._state = state
+        _LOGGER.debug("%s:%f"%(self.unique_id,state))
+        
     @property
     def state(self):
         """Returns state of the sensor."""
         return self._state
-
-    @property
-    def bus(self):
-        return self._bus
 
     @property
     def address(self):
@@ -79,6 +89,18 @@ class ADS1115Sensor(SensorEntity):
     @property
     def pin(self):
         return self._pin
+
+    @property
+    def pinNumber(self):
+        return int(self._pin[0])
+
+    @property
+    def gainNumber(self):
+        return int(self._gain[0])
+
+    @property
+    def gainValue(self):
+        return float(self._gain[2:])
 
     @property
     def should_poll(self) -> bool:
@@ -99,5 +121,5 @@ class ADS1115Sensor(SensorEntity):
 
     @property
     def native_unit_of_measurement(self) -> str | None:
-        return UnitOfElectricPotential.MILLIVOLT
+        return UnitOfElectricPotential.VOLT
 

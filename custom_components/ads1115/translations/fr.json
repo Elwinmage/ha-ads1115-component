@@ -6,10 +6,9 @@
             "user": {
                 "title": "Define New Entity",
                 "data": {
-                    "i2c_bus": "I2C bus",
-                    "i2c_address": "I2C address",
-                    "pin_number": "Pin number",
-                    "pin_name": "Pin name"
+                    "i2c_address": "Adresse I2C",
+                    "pin_number": "Numéro de l'entrée",
+                    "pin_name": "Nom de l'entrée"
                 }
             }
         },
@@ -23,7 +22,7 @@
             "init": {
                 "title": "Define Entity Properties",
                 "data": {
-                    "gain": "GAIN"
+                    "gain": "Gain"
                 }
             }
         }

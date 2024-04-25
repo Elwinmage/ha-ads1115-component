@@ -1,6 +1,10 @@
 """Config flow for MCP23017 component."""
 
 import voluptuous as vol
+import glob
+import logging
+
+import smbus2 
 
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -10,17 +14,21 @@ from .const import (
     CONF_FLOW_PLATFORM,
     CONF_I2C_BUS,
     CONF_DEFAULT_I2C_BUS,
+    SKIP_I2C_BUSES,
     CONF_DEFAULT_ADDRESS,
     CONF_I2C_ADDRESS,
     CONF_PINS,
     CONF_FLOW_PIN_NUMBER,
     CONF_FLOW_PIN_NAME,
+    CONF_PIN_MULT,
+    CONF_DEFAULT_PIN,
     CONF_GAIN,
     CONF_GAIN_DEFAULT,
-    CONF_GAINS
+    CONF_GAINS,
 )
 
 PLATFORMS = ["sensor"]
+_LOGGER = logging.getLogger(__name__)
 
 
 class ADS1115ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -30,17 +38,15 @@ class ADS1115ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     def _title(self, user_input):
-        return "[%d]0x%02x:pin %d ('%s')" % (
-            user_input[CONF_I2C_BUS],
+        return "%s:pin %s ('%s')" % (
             user_input[CONF_I2C_ADDRESS],
             user_input[CONF_FLOW_PIN_NUMBER],
             user_input[CONF_FLOW_PIN_NAME],
         )
 
     def _unique_id(self, user_input):
-        return "%s.%d.%d.%d" % (
+        return "%s.%s.%s" % (
             DOMAIN,
-            user_input[CONF_I2C_BUS],
             user_input[CONF_I2C_ADDRESS],
             user_input[CONF_FLOW_PIN_NUMBER],
         )
@@ -73,8 +79,7 @@ class ADS1115ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             if CONF_FLOW_PIN_NAME not in user_input:
-                user_input[CONF_FLOW_PIN_NAME] = "bus %d pin 0x%02x:%d" % (
-                    user_input[CONF_I2C_BUS],
+                user_input[CONF_FLOW_PIN_NAME] = " pin %s:%d" % (
                     user_input[CONF_I2C_ADDRESS],
                     user_input[CONF_FLOW_PIN_NUMBER],
                 )
@@ -84,20 +89,40 @@ class ADS1115ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data=user_input,
             )
 
+        devices_detected=[]
+        i2c_buses=glob.glob('/dev/i2c-?')
+        for sbus in i2c_buses:
+            if sbus not in SKIP_I2C_BUSES:
+                bus = smbus2.SMBus(int(sbus[-1]))
+                for device in range (0x48,0x4C):
+                    try:
+                        bus.read_byte(device)
+                        devices_detected+=[sbus+'@'+str(hex(device))]
+                    except:
+                        pass
+        if len(devices_detected) == 0:
+            _LOGGER.error("No ADS1115 detected")
+            return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(
+                            CONF_I2C_ADDRESS, default=CONF_DEFAULT_ADDRESS
+                        ): vol.In(["No ADS1115 device detected"]),
+                    }
+                ),
+            )
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_I2C_BUS, default=CONF_DEFAULT_I2C_BUS
-                    ): vol.All(vol.Coerce(int), vol.Range(min=0, max=1)),
-                    vol.Required(
                         CONF_I2C_ADDRESS, default=CONF_DEFAULT_ADDRESS
-                    ): vol.All(vol.Coerce(int), vol.Range(min=72, max=75)),
+                    ): vol.In(devices_detected),
 
-                    vol.Required(CONF_FLOW_PIN_NUMBER, default=0): vol.All(
-                        vol.Coerce(int), vol.Range(min=0, max=3)
-                    ),
+                    vol.Required(CONF_FLOW_PIN_NUMBER, default=CONF_DEFAULT_PIN
+                                 ): 
+                        vol.In(CONF_PIN_MULT),
                     vol.Optional(CONF_FLOW_PIN_NAME): str,
                 }
             ),
