@@ -14,9 +14,9 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.helpers.entity import DeviceInfo#, DeviceEntryType
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 
-from .const import DOMAIN, CONF_FLOW_PIN_NAME,CONF_I2C_ADDRESS,CONF_FLOW_PIN_NUMBER,CONF_GAIN, CONF_GAIN_DEFAULT
+from .const import DOMAIN, CONF_FLOW_PIN_NAME,CONF_I2C_ADDRESS,CONF_FLOW_PIN_NUMBER,CONF_GAIN, CONF_GAIN_DEFAULT, CONF_DEVICE_ID,DEVICE_MANUFACTURER
 
 from . import async_get_or_create
 
@@ -56,11 +56,24 @@ class ADS1115Sensor(SensorEntity):
         self._attr_name = entry_infos.data.get(CONF_FLOW_PIN_NAME)
         self._i2c_address = entry_infos.data.get(CONF_I2C_ADDRESS)
         self._pin = entry_infos.data.get(CONF_FLOW_PIN_NUMBER)
+#        self._device_id = self.unique_id
         self._gain = entry_infos.data.get(CONF_GAIN)
         if self._gain == None:
             self._gain = CONF_GAIN_DEFAULT
         self._read_request=[((((((1 ) <<  3) + self.pinNumber)<<3)+(self.gainNumber))<<1),0x83]
         
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return the device info."""
+        return DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN,self.address)},
+            name=self.address,
+#            identifiers={(DOMAIN,self._device_id)},
+#            name=self._device_id,
+            manufacturer=DEVICE_MANUFACTURER,
+            model=DOMAIN,
+        )
 
     @property
     def readRequest(self):

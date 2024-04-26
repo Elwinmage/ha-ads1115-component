@@ -68,20 +68,18 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
 async def async_get_or_create(hass, entity):
     """Get or create a ADS115 component from entity bus and i2c address."""
-
     i2c_address = entity.address
-    i2c_component = i2c_address
-    # DOMAIN data async mutex
+        # DOMAIN data async mutex
     try:
         async with ADS1115_DATA_LOCK:
             if i2c_address in hass.data[DOMAIN]:
-                component = hass.data[DOMAIN][i2c_component]
+                component = hass.data[DOMAIN][i2c_address]
             else:
                 # Try to create component when it doesn't exist
                 component = await hass.async_add_executor_job(
                     functools.partial(ADS1115, i2c_address)
                 )
-                hass.data[DOMAIN][i2c_component] = component
+                hass.data[DOMAIN][i2c_address] = component
 
                 # Start polling thread if hass is already running
                 if hass.is_running:
@@ -91,10 +89,21 @@ async def async_get_or_create(hass, entity):
                 devices = device_registry.async_get(hass)
                 devices.async_get_or_create(
                     config_entry_id=entity._entry_infos.entry_id,
-                    identifiers={(DOMAIN, i2c_component)},
+                    identifiers={(DOMAIN, i2c_address)},
+                    #identifiers={(i2c_address)},
+                    manufacturer="Texas Instruments",
                     model=DOMAIN,
-                    name=f"{DOMAIN}{i2c_address}",
+                    name=f"{DOMAIN}@{i2c_address}",
                 )
+
+
+                # devices.async_get_or_create(
+                #     config_entry_id=entity._entry_infos.entry_id,
+                #     #identifiers={(DOMAIN, i2c_component)},
+                #     identifiers=i2c_address,
+                #     model=DOMAIN,
+                #     name=f"{DOMAIN}{i2c_address}",
+                # )
 
             # Link entity to component
             await hass.async_add_executor_job(

@@ -4,6 +4,9 @@ DOMAIN = "ads1115"
 
 CONF_FLOW_PLATFORM = "platform"
 
+CONF_DEVICE_ID = "device_id"
+DEVICE_MANUFACTURER = "Texas Instruments"
+
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 CONF_I2C_BUS="i2c_bus"
