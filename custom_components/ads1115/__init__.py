@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers import device_registry
 from homeassistant.const import EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP
-from .const import DOMAIN, PLATFORMS, DEFAULT_SCAN_RATE
+from .const import DOMAIN, PLATFORMS, DEFAULT_SCAN_RATE,MAX_RETRY
 
 _LOGGER = logging.getLogger(__name__)
 ADS1115_DATA_LOCK = asyncio.Lock()
@@ -175,23 +175,33 @@ class ADS1115(threading.Thread):
     def run(self):
         _LOGGER.info("%s start polling thread", self.unique_id)
         bus = smbus2.SMBus(self._bus)
+        errors=0
         while self._run:
             with self:
                 for entity in self._entities:
-                    if entity != None:
-                        data = entity.readRequest
-                        bus.write_i2c_block_data(self._address, 0x01, data)
-                        _LOGGER.debug("request: %s"%(data))
-                        time.sleep(0.5)
-                        data = bus.read_i2c_block_data(self._address, 0x00, 2)
-                        raw_adc = data[0] * 256 + data[1]
-                        if raw_adc > 32767:
-                          raw_adc -= 65535
-                        v_p_b = entity.gainValue / 32768
-                        voltage=raw_adc * v_p_b
-                        _LOGGER.debug("raw: %d, gain %f, %fmV"%(raw_adc,entity.gainValue,voltage*1000))
-                        entity.set_state(voltage)
-                _LOGGER.debug("heartrate: %s",self.unique_id)
+                    try:
+                        if entity != None:
+                            _LOGGER.debug("Try to read %s"%(entity.unique_id))
+                            data = entity.readRequest
+                            bus.write_i2c_block_data(self._address, 0x01, data)
+                            _LOGGER.debug("request: %s"%(data))
+                            time.sleep(0.5)
+                            data = bus.read_i2c_block_data(self._address, 0x00, 2)
+                            raw_adc = data[0] * 256 + data[1]
+                            if raw_adc > 32767:
+                              raw_adc -= 65535
+                            v_p_b = entity.gainValue / 32768
+                            voltage=raw_adc * v_p_b
+                            _LOGGER.debug("raw: %d, gain %f, %fmV"%(raw_adc,entity.gainValue,voltage*1000))
+                            entity.set_state(voltage)
+                    except:
+                        if errors < MAX_RETRY:
+                            errors +=1
+                            time.sleep(DEFAULT_SCAN_RATE)  
+                        else:
+                            _LOGGER.error("Can not read data on : %s"%(self.unique_id))
+                            errors = 0
+            _LOGGER.debug("heartrate: %s",self.unique_id)
             time.sleep(DEFAULT_SCAN_RATE)
 
         _LOGGER.info("%s stop polling thread", self.unique_id)
@@ -212,3 +222,4 @@ class ADS1115(threading.Thread):
         return True
 
 
+ 
